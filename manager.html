@@ -538,6 +538,77 @@
             transform: translateY(-1px);
         }
 
+        .save-btn.secondary {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .setting-note {
+            margin-top: 10px;
+            font-size: 0.72rem;
+            color: var(--text-2);
+            line-height: 1.5;
+        }
+
+        .inline-msg {
+            margin-top: 8px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            min-height: 18px;
+        }
+
+        .inline-msg.success {
+            color: var(--success);
+        }
+
+        .inline-msg.error {
+            color: var(--danger);
+        }
+
+        .admin-list {
+            margin-top: 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.02);
+            max-height: 220px;
+            overflow-y: auto;
+        }
+
+        .admin-list-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 9px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            font-size: 0.76rem;
+            color: var(--text-1);
+        }
+
+        .admin-list-item:last-child {
+            border-bottom: none;
+        }
+
+        .admin-list-item b {
+            color: var(--text-0);
+            font-weight: 700;
+        }
+
+        .admin-pill {
+            font-size: 0.62rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 3px 7px;
+            color: var(--text-2);
+            white-space: nowrap;
+        }
+
+        .muted-empty {
+            padding: 10px;
+            color: var(--text-2);
+            font-size: 0.74rem;
+        }
+
         .toolbar {
             padding: 10px 14px 0;
             display: flex;
@@ -701,7 +772,7 @@
                 <div class="pane-header">
                     <div>
                         <h1 class="pane-title">Configuration</h1>
-                        <div class="pane-sub">Manager Runtime Preferences</div>
+                        <div class="pane-sub">Runtime + PostgreSQL Admin Management</div>
                     </div>
                     <span class="pane-badge">Local Settings</span>
                 </div>
@@ -719,6 +790,49 @@
                         </select>
 
                         <button class="save-btn" onclick="saveSettings()">Save System Changes</button>
+                        <p class="setting-note">These runtime settings are stored in local browser storage.</p>
+                    </div>
+
+                    <div class="setting-card">
+                        <label for="new-username">New User Name</label>
+                        <input id="new-username" type="text" placeholder="e.g. operator3">
+
+                        <label for="new-password" style="margin-top:12px;">Password</label>
+                        <input id="new-password" type="password" placeholder="Enter password">
+
+                        <label for="new-role" style="margin-top:12px;">Role</label>
+                        <select id="new-role" onchange="toggleAssignedMachine()">
+                            <option value="operator" selected>operator</option>
+                            <option value="maintenance">maintenance</option>
+                            <option value="manager">manager</option>
+                        </select>
+
+                        <label for="new-assigned-machine" style="margin-top:12px;">Assigned Machine</label>
+                        <select id="new-assigned-machine"></select>
+
+                        <button class="save-btn secondary" onclick="addUser()">Create User</button>
+                        <div id="user-form-msg" class="inline-msg"></div>
+                    </div>
+
+                    <div class="setting-card">
+                        <label for="new-machine-name">New Machine Name</label>
+                        <input id="new-machine-name" type="text" placeholder="e.g. Découpeuse">
+
+                        <label for="new-machine-type" style="margin-top:12px;">Machine Type</label>
+                        <input id="new-machine-type" type="text" placeholder="e.g. Cutter">
+
+                        <button class="save-btn secondary" onclick="addMachine()">Add Machine</button>
+                        <div id="machine-form-msg" class="inline-msg"></div>
+                    </div>
+
+                    <div class="setting-card" style="grid-column: 1 / -1;">
+                        <label style="margin-bottom: 6px;">Users Table Snapshot</label>
+                        <div id="users-list" class="admin-list"></div>
+
+                        <label style="margin-top:12px; margin-bottom: 6px;">Machines Table Snapshot</label>
+                        <div id="machines-list" class="admin-list"></div>
+
+                        <button class="save-btn" onclick="loadAdminData()">Refresh Data From PostgreSQL</button>
                     </div>
                 </div>
             </section>
@@ -747,6 +861,159 @@
 
             if (tabId === 'logs') {
                 loadPerformanceLogs();
+            }
+
+            if (tabId === 'settings') {
+                loadAdminData();
+            }
+        }
+
+        function setInlineMessage(id, message, type) {
+            const el = document.getElementById(id);
+            el.className = `inline-msg ${type || ''}`;
+            el.innerText = message || '';
+        }
+
+        function toggleAssignedMachine() {
+            const role = document.getElementById('new-role').value;
+            const machineSelect = document.getElementById('new-assigned-machine');
+            machineSelect.disabled = role !== 'operator';
+            if (role !== 'operator') {
+                machineSelect.value = 'None';
+            }
+        }
+
+        async function loadAdminData() {
+            try {
+                const [usersRes, machinesRes] = await Promise.all([
+                    fetch('http://localhost:3000/api/users'),
+                    fetch('http://localhost:3000/machines')
+                ]);
+
+                const users = await usersRes.json();
+                const machineRows = await machinesRes.json();
+
+                renderUsersList(users);
+                renderMachinesList(machineRows);
+                populateMachineSelect(machineRows);
+            } catch (e) {
+                setInlineMessage('user-form-msg', 'Failed to load users/machines data.', 'error');
+                setInlineMessage('machine-form-msg', 'Failed to load users/machines data.', 'error');
+            }
+        }
+
+        function renderUsersList(users) {
+            const container = document.getElementById('users-list');
+            if (!Array.isArray(users) || users.length === 0) {
+                container.innerHTML = '<div class="muted-empty">No users in table.</div>';
+                return;
+            }
+
+            container.innerHTML = users.map(u => `
+                <div class="admin-list-item">
+                    <span><b>${u.username}</b> (${u.role})</span>
+                    <span class="admin-pill">${u.assigned_machine || 'No machine'}</span>
+                </div>
+            `).join('');
+        }
+
+        function renderMachinesList(machineRows) {
+            const container = document.getElementById('machines-list');
+            if (!Array.isArray(machineRows) || machineRows.length === 0) {
+                container.innerHTML = '<div class="muted-empty">No machines in table.</div>';
+                return;
+            }
+
+            container.innerHTML = machineRows.map(m => `
+                <div class="admin-list-item">
+                    <span><b>${m.name}</b></span>
+                    <span class="admin-pill">${m.type || 'Unspecified'}</span>
+                </div>
+            `).join('');
+        }
+
+        function populateMachineSelect(machineRows) {
+            const select = document.getElementById('new-assigned-machine');
+            const options = ['<option value="None">None</option>'];
+            (machineRows || []).forEach(m => {
+                options.push(`<option value="${m.name}">${m.name}</option>`);
+            });
+            select.innerHTML = options.join('');
+            toggleAssignedMachine();
+        }
+
+        async function addUser() {
+            const username = document.getElementById('new-username').value.trim();
+            const password = document.getElementById('new-password').value.trim();
+            const role = document.getElementById('new-role').value;
+            const machine = document.getElementById('new-assigned-machine').value;
+
+            if (!username || !password || !role) {
+                setInlineMessage('user-form-msg', 'Please fill name, password and role.', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch('http://localhost:3000/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, role, machine })
+                });
+
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.error || 'Create user failed');
+                }
+
+                setInlineMessage('user-form-msg', 'User created in users table successfully.', 'success');
+                document.getElementById('new-username').value = '';
+                document.getElementById('new-password').value = '';
+                await loadAdminData();
+            } catch (e) {
+                setInlineMessage('user-form-msg', e.message || 'Create user failed.', 'error');
+            }
+        }
+
+        async function addMachine() {
+            const name = document.getElementById('new-machine-name').value.trim();
+            const type = document.getElementById('new-machine-type').value.trim();
+
+            if (!name) {
+                setInlineMessage('machine-form-msg', 'Machine name is required.', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch('http://localhost:3000/api/machines', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, type })
+                });
+
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.error || 'Add machine failed');
+                }
+
+                if (!machines[name]) {
+                    machines[name] = {
+                        status: 'Running',
+                        temp: 0,
+                        load: 0,
+                        health: 'New',
+                        vibration: 'Unknown',
+                        alertPending: false
+                    };
+                    machineOrder.push(name);
+                }
+
+                updateUI();
+                setInlineMessage('machine-form-msg', 'Machine created in machines table successfully.', 'success');
+                document.getElementById('new-machine-name').value = '';
+                document.getElementById('new-machine-type').value = '';
+                await loadAdminData();
+            } catch (e) {
+                setInlineMessage('machine-form-msg', e.message || 'Add machine failed.', 'error');
             }
         }
 
@@ -918,6 +1185,7 @@
         }, 1000);
 
         updateUI();
+        loadAdminData();
     </script>
 </body>
 </html>
