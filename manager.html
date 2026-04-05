@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Monitoring System | Management Command Center</title>
+    <script src="https://cdn.socket.io/4.7.1/socket.io.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-0: #06070b;
+            --bg-1: #0b0f17;
+            --bg-2: #121a28;
+            --card: rgba(255, 255, 255, 0.04);
+            --card-hover: rgba(255, 255, 255, 0.07);
+            --border: rgba(255, 255, 255, 0.1);
+            --border-strong: rgba(255, 255, 255, 0.2);
+            --text-0: #eff4ff;
+            --text-1: #b2bfd5;
+            --text-2: #6f7f9d;
+            --primary: #2f7cff;
+            --primary-soft: rgba(47, 124, 255, 0.2);
+            --danger: #ef4444;
+            --danger-soft: rgba(239, 68, 68, 0.2);
+            --warning: #f59e0b;
+            --warning-soft: rgba(245, 158, 11, 0.2);
+            --success: #10b981;
+            --success-soft: rgba(16, 185, 129, 0.2);
+            --radius: 16px;
+            --radius-sm: 12px;
+            --header-h: 78px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Sora', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text-0);
+            background:
+                radial-gradient(circle at 12% 88%, rgba(47, 124, 255, 0.18), transparent 35%),
+                radial-gradient(circle at 92% 12%, rgba(16, 185, 129, 0.15), transparent 30%),
+                linear-gradient(165deg, var(--bg-0), var(--bg-1) 45%, var(--bg-2));
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 56px 56px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: var(--header-h);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            background: rgba(7, 10, 16, 0.82);
+            backdrop-filter: blur(14px);
+            border-bottom: 1px solid var(--border);
+            z-index: 10;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-badge {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #2f7cff, #0ea5e9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            box-shadow: 0 8px 20px rgba(47, 124, 255, 0.3);
+        }
+
+        .brand-title {
+            font-size: 0.98rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        .brand-sub {
+            color: var(--text-2);
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.11em;
+            margin-top: 2px;
+        }
+
+        .topbar-center {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.76rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: var(--success);
+        }
+
+        .live-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 14px rgba(16, 185, 129, 0.7);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.25); opacity: 0.7; }
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .clock {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            color: var(--text-1);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 7px 12px;
+            min-width: 88px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .logout-btn {
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-1);
+            border-radius: 999px;
+            padding: 8px 14px;
+            font-size: 0.76rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .logout-btn:hover {
+            border-color: var(--danger);
+            color: var(--danger);
+            background: rgba(239, 68, 68, 0.08);
+        }
+
+        .layout {
+            position: relative;
+            z-index: 1;
+            max-width: 1520px;
+            margin: 0 auto;
+            padding: calc(var(--header-h) + 22px) 22px 24px;
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 16px;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            backdrop-filter: blur(10px);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            height: fit-content;
+            position: sticky;
+            top: calc(var(--header-h) + 20px);
+        }
+
+        .side-title {
+            font-size: 0.68rem;
+            color: var(--text-2);
+            text-transform: uppercase;
+            letter-spacing: 0.11em;
+            font-weight: 700;
+            margin-bottom: 6px;
+            padding-left: 6px;
+        }
+
+        .nav-item {
+            padding: 12px 14px;
+            border-radius: 12px;
+            color: var(--text-1);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.84rem;
+            font-weight: 600;
+            border: 1px solid transparent;
+            user-select: none;
+        }
+
+        .nav-item:hover {
+            color: var(--text-0);
+            border-color: var(--border);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .nav-item.active {
+            color: #ffffff;
+            border-color: rgba(47, 124, 255, 0.45);
+            background: linear-gradient(135deg, rgba(47, 124, 255, 0.25), rgba(14, 165, 233, 0.12));
+            box-shadow: inset 0 0 0 1px rgba(47, 124, 255, 0.25);
+        }
+
+        .content {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .pane.hidden {
+            display: none;
+        }
+
+        .panel-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            backdrop-filter: blur(8px);
+        }
+
+        .pane-header {
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .pane-title {
+            font-size: 1.22rem;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+
+        .pane-sub {
+            color: var(--text-2);
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 700;
+            margin-top: 3px;
+        }
+
+        .pane-badge {
+            font-size: 0.72rem;
+            color: var(--text-1);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 7px 10px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .stats-grid {
+            padding: 14px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+        }
+
+        .stat-card {
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: rgba(255, 255, 255, 0.03);
+            padding: 14px;
+        }
+
+        .stat-label {
+            color: var(--text-2);
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 700;
+        }
+
+        .stat-value {
+            margin-top: 8px;
+            font-size: 1.65rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .machine-grid {
+            padding: 0 14px 14px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 10px;
+        }
+
+        .machine-card {
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: rgba(255, 255, 255, 0.03);
+            padding: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .machine-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--border-strong);
+            background: var(--card-hover);
+        }
+
+        .machine-card.pending {
+            border-color: rgba(239, 68, 68, 0.35);
+            background: rgba(239, 68, 68, 0.08);
+        }
+
+        .machine-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            gap: 8px;
+        }
+
+        .machine-name {
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+
+        .status-chip {
+            font-size: 0.62rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 700;
+            border-radius: 999px;
+            padding: 4px 8px;
+            border: 1px solid;
+        }
+
+        .status-chip.running {
+            color: var(--success);
+            border-color: rgba(16, 185, 129, 0.35);
+            background: var(--success-soft);
+        }
+
+        .status-chip.pending {
+            color: var(--danger);
+            border-color: rgba(239, 68, 68, 0.35);
+            background: var(--danger-soft);
+        }
+
+        .status-chip.warning {
+            color: var(--warning);
+            border-color: rgba(245, 158, 11, 0.35);
+            background: var(--warning-soft);
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .metric-item {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 9px;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .metric-item span {
+            display: block;
+            font-size: 0.62rem;
+            color: var(--text-2);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .metric-item b {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-0);
+        }
+
+        .logs-wrap {
+            padding: 14px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        th {
+            font-size: 0.66rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-2);
+            font-weight: 700;
+            text-align: left;
+            padding: 11px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            font-size: 0.8rem;
+            color: var(--text-1);
+            padding: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .status-pill {
+            display: inline-block;
+            font-size: 0.63rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 700;
+            border-radius: 999px;
+            padding: 4px 8px;
+            border: 1px solid;
+        }
+
+        .status-pill.Pending {
+            color: var(--danger);
+            border-color: rgba(239, 68, 68, 0.35);
+            background: var(--danger-soft);
+        }
+
+        .status-pill.In-Progress {
+            color: var(--warning);
+            border-color: rgba(245, 158, 11, 0.35);
+            background: var(--warning-soft);
+        }
+
+        .status-pill.Resolved {
+            color: var(--success);
+            border-color: rgba(16, 185, 129, 0.35);
+            background: var(--success-soft);
+        }
+
+        .settings-grid {
+            padding: 14px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 10px;
+        }
+
+        .setting-card {
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: rgba(255, 255, 255, 0.03);
+            padding: 14px;
+        }
+
+        .setting-card label {
+            display: block;
+            font-size: 0.67rem;
+            color: var(--text-2);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .setting-card input,
+        .setting-card select {
+            width: 100%;
+            height: 40px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--text-0);
+            padding: 0 10px;
+            font-family: inherit;
+            font-size: 0.84rem;
+            outline: none;
+        }
+
+        .setting-card input:focus,
+        .setting-card select:focus {
+            border-color: rgba(47, 124, 255, 0.6);
+        }
+
+        .save-btn {
+            margin-top: 10px;
+            width: 100%;
+            height: 40px;
+            border: 0;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #2f7cff, #0ea5e9);
+            color: white;
+            font-size: 0.73rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: filter 0.2s ease, transform 0.2s ease;
+        }
+
+        .save-btn:hover {
+            filter: brightness(1.08);
+            transform: translateY(-1px);
+        }
+
+        .toolbar {
+            padding: 10px 14px 0;
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .tool-btn {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--text-1);
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 700;
+            height: 36px;
+            padding: 0 10px;
+            cursor: pointer;
+        }
+
+        .tool-btn:hover {
+            border-color: var(--border-strong);
+            color: var(--text-0);
+        }
+
+        @media (max-width: 1080px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                position: static;
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+            }
+
+            .side-title {
+                grid-column: 1 / -1;
+                margin-bottom: 0;
+            }
+        }
+
+        @media (max-width: 680px) {
+            .topbar {
+                padding: 0 12px;
+            }
+
+            .topbar-center,
+            .clock,
+            .brand-sub {
+                display: none;
+            }
+
+            .layout {
+                padding-left: 12px;
+                padding-right: 12px;
+            }
+
+            .sidebar {
+                grid-template-columns: 1fr;
+            }
+
+            .machine-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <div class="brand">
+            <div class="brand-badge">MS</div>
+            <div>
+                <div class="brand-title">Smart Monitoring Management</div>
+                <div class="brand-sub">Executive Command Center</div>
+            </div>
+        </div>
+
+        <div class="topbar-center">
+            <span class="live-dot" id="live-dot"></span>
+            <span id="live-state">System Live</span>
+        </div>
+
+        <div class="topbar-right">
+            <div class="clock" id="live-clock">--:--:--</div>
+            <button class="logout-btn" onclick="logout()">Terminate Session</button>
+        </div>
+    </header>
+
+    <main class="layout">
+        <aside class="sidebar">
+            <div class="side-title">Navigation</div>
+            <div class="nav-item active" onclick="switchTab('monitor', this)">Real-time Monitor</div>
+            <div class="nav-item" onclick="switchTab('logs', this)">Performance Logs</div>
+            <div class="nav-item" onclick="switchTab('settings', this)">System Settings</div>
+        </aside>
+
+        <section class="content">
+            <section id="pane-monitor" class="pane panel-card">
+                <div class="pane-header">
+                    <div>
+                        <h1 class="pane-title">Command Center</h1>
+                        <div class="pane-sub">Live Machine Supervision</div>
+                    </div>
+                    <span class="pane-badge">Manager View</span>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <span class="stat-label">Running Machines</span>
+                        <span id="kpi-running" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Critical Faults</span>
+                        <span id="fault-count" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Avg Temperature</span>
+                        <span id="kpi-temp" class="stat-value">--</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Avg Load</span>
+                        <span id="kpi-load" class="stat-value">--</span>
+                    </div>
+                </div>
+
+                <div id="machine-grid" class="machine-grid"></div>
+            </section>
+
+            <section id="pane-logs" class="pane panel-card hidden">
+                <div class="pane-header">
+                    <div>
+                        <h1 class="pane-title">Performance History</h1>
+                        <div class="pane-sub">Maintenance Ticket Timeline</div>
+                    </div>
+                    <span class="pane-badge" id="log-count">0 Records</span>
+                </div>
+
+                <div class="toolbar">
+                    <button class="tool-btn" onclick="loadPerformanceLogs()">Refresh Logs</button>
+                </div>
+
+                <div class="logs-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Machine</th>
+                                <th>Issue</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="log-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="pane-settings" class="pane panel-card hidden">
+                <div class="pane-header">
+                    <div>
+                        <h1 class="pane-title">Configuration</h1>
+                        <div class="pane-sub">Manager Runtime Preferences</div>
+                    </div>
+                    <span class="pane-badge">Local Settings</span>
+                </div>
+
+                <div class="settings-grid">
+                    <div class="setting-card">
+                        <label for="refresh-rate">API Refresh Rate (ms)</label>
+                        <input id="refresh-rate" type="number" min="500" step="100" value="1000">
+
+                        <label for="alert-volume" style="margin-top:12px;">Alert Volume</label>
+                        <select id="alert-volume">
+                            <option value="high">High</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+
+                        <button class="save-btn" onclick="saveSettings()">Save System Changes</button>
+                    </div>
+                </div>
+            </section>
+        </section>
+    </main>
+
+    <script>
+        const socket = io('http://localhost:3000');
+        const machineOrder = ['Broyeur', 'Atomiseur', 'Presse', 'Séchoir', 'Imprimante', 'Four', 'Marpack'];
+
+        const machines = {
+            Broyeur: { status: 'Running', temp: 42, load: 78, health: 'Good', vibration: 'Normal', alertPending: false },
+            Atomiseur: { status: 'Running', temp: 115, load: 92, health: 'Optimal', vibration: 'Normal', alertPending: false },
+            Presse: { status: 'Running', temp: 38, load: 65, health: 'Good', vibration: 'Normal', alertPending: false },
+            'Séchoir': { status: 'Running', temp: 180, load: 88, health: 'Good', vibration: 'Normal', alertPending: false },
+            Imprimante: { status: 'Running', temp: 24, load: 40, health: 'Optimal', vibration: 'Normal', alertPending: false },
+            Four: { status: 'Running', temp: 1200, load: 95, health: 'Check Soon', vibration: 'Normal', alertPending: false },
+            Marpack: { status: 'Running', temp: 31, load: 55, health: 'Good', vibration: 'Normal', alertPending: false }
+        };
+
+        function switchTab(tabId, element) {
+            document.querySelectorAll('.pane').forEach(p => p.classList.add('hidden'));
+            document.getElementById('pane-' + tabId).classList.remove('hidden');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            element.classList.add('active');
+
+            if (tabId === 'logs') {
+                loadPerformanceLogs();
+            }
+        }
+
+        async function loadPerformanceLogs() {
+            try {
+                const res = await fetch('http://localhost:3000/tickets');
+                const data = await res.json();
+                const body = document.getElementById('log-table-body');
+                document.getElementById('log-count').innerText = `${data.length} Records`;
+
+                body.innerHTML = data.map(t => {
+                    const stamp = new Date(t.created_at || t.updated_at).toLocaleString();
+                    return `
+                        <tr>
+                            <td>${stamp}</td>
+                            <td style="font-weight:600; color:var(--text-0)">${t.machine_name}</td>
+                            <td>${t.fault_type}</td>
+                            <td><span class="status-pill ${t.status}">${t.status}</span></td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (e) {
+                console.error('Error loading logs', e);
+            }
+        }
+
+        function getDisplayStatus(machine) {
+            if (machine.alertPending) return 'Pending';
+            return machine.status || 'Running';
+        }
+
+        function statusClass(status) {
+            if (status === 'Pending') return 'pending';
+            if (status === 'Warning') return 'warning';
+            return 'running';
+        }
+
+        function updateUI() {
+            const grid = document.getElementById('machine-grid');
+            let faults = 0;
+            let runningCount = 0;
+            let totalTemp = 0;
+            let totalLoad = 0;
+            let count = 0;
+
+            grid.innerHTML = machineOrder.map(name => {
+                const m = machines[name];
+                const currentStatus = getDisplayStatus(m);
+                const chipClass = statusClass(currentStatus);
+                const cardClass = currentStatus === 'Pending' ? 'pending' : '';
+
+                if (currentStatus === 'Pending') faults += 1;
+                if (currentStatus === 'Running') runningCount += 1;
+
+                totalTemp += Number(m.temp || 0);
+                totalLoad += Number(m.load || 0);
+                count += 1;
+
+                return `
+                    <article class="machine-card ${cardClass}" data-machine-name="${name}">
+                        <div class="machine-top">
+                            <h3 class="machine-name">${name}</h3>
+                            <span class="status-chip ${chipClass}">${currentStatus}</span>
+                        </div>
+                        <div class="metrics-grid">
+                            <div class="metric-item"><span>Core Temp</span><b>${m.temp}°C</b></div>
+                            <div class="metric-item"><span>Motor Load</span><b>${m.load}%</b></div>
+                            <div class="metric-item"><span>Asset Health</span><b>${m.health}</b></div>
+                            <div class="metric-item"><span>Vibration</span><b>${m.vibration}</b></div>
+                        </div>
+                    </article>
+                `;
+            }).join('');
+
+            document.getElementById('fault-count').innerText = faults;
+            document.getElementById('fault-count').style.color = faults > 0 ? 'var(--danger)' : 'var(--text-0)';
+            document.getElementById('kpi-running').innerText = runningCount;
+            document.getElementById('kpi-temp').innerText = count ? `${(totalTemp / count).toFixed(1)}°C` : '--';
+            document.getElementById('kpi-load').innerText = count ? `${(totalLoad / count).toFixed(1)}%` : '--';
+        }
+
+        function normalizeMachineName(inputName) {
+            const map = {
+                broyeur: 'Broyeur',
+                atomiseur: 'Atomiseur',
+                presse: 'Presse',
+                sechoir: 'Séchoir',
+                'séchoir': 'Séchoir',
+                imprimante: 'Imprimante',
+                four: 'Four',
+                marpack: 'Marpack'
+            };
+
+            const key = String(inputName || '').toLowerCase();
+            return map[key] || inputName;
+        }
+
+        socket.on('connect', () => {
+            document.getElementById('live-state').innerText = 'System Live';
+            document.getElementById('live-state').style.color = 'var(--success)';
+            document.getElementById('live-dot').style.background = 'var(--success)';
+        });
+
+        socket.on('disconnect', () => {
+            document.getElementById('live-state').innerText = 'Connection Lost';
+            document.getElementById('live-state').style.color = 'var(--danger)';
+            document.getElementById('live-dot').style.background = 'var(--danger)';
+        });
+
+        socket.on('notify_maintenance', (data) => {
+            const name = normalizeMachineName(data.machine_name);
+            if (machines[name]) {
+                machines[name].alertPending = true;
+                updateUI();
+            }
+        });
+
+        socket.on('ticket_updated', (data) => {
+            const name = normalizeMachineName(data.machine_name);
+            if (machines[name] && data.status === 'Resolved') {
+                machines[name].alertPending = false;
+                if (machines[name].status === 'Pending') {
+                    machines[name].status = 'Running';
+                }
+                updateUI();
+            }
+        });
+
+        socket.on('factory_live_data', (dataList) => {
+            dataList.forEach(item => {
+                const name = normalizeMachineName(item.machine_name || item.name);
+                if (!machines[name]) return;
+
+                const d = item.data || {};
+                if (typeof d.temperature !== 'undefined') machines[name].temp = Number(d.temperature);
+                if (typeof d.temp !== 'undefined') machines[name].temp = Number(d.temp);
+                if (typeof d.load !== 'undefined') machines[name].load = Number(d.load);
+                if (typeof d.speed !== 'undefined' && typeof d.load === 'undefined') {
+                    const normalizedLoad = Math.min(100, Math.max(0, Number(d.speed) / 30));
+                    machines[name].load = Number(normalizedLoad.toFixed(1));
+                }
+
+                const rawStatus = String(d.status || '').toLowerCase();
+                if (!machines[name].alertPending) {
+                    if (rawStatus.includes('warning')) machines[name].status = 'Warning';
+                    else if (rawStatus.includes('on') || rawStatus.includes('running')) machines[name].status = 'Running';
+                    else if (rawStatus.includes('off') || rawStatus.includes('stop')) machines[name].status = 'Running';
+                }
+            });
+
+            updateUI();
+        });
+
+        function saveSettings() {
+            const refreshRate = document.getElementById('refresh-rate').value;
+            const volume = document.getElementById('alert-volume').value;
+            localStorage.setItem('manager_refresh_rate', refreshRate);
+            localStorage.setItem('manager_alert_volume', volume);
+            alert('Settings saved successfully.');
+        }
+
+        function logout() {
+            localStorage.removeItem('factory_session');
+            window.location.href = 'login.html';
+        }
+
+        setInterval(() => {
+            document.getElementById('live-clock').innerText = new Date().toLocaleTimeString();
+        }, 1000);
+
+        updateUI();
+    </script>
+</body>
+</html>

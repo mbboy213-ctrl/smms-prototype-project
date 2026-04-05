@@ -1,0 +1,20 @@
+# Node
+node_modules/
+
+# Python virtual environments
+.venv/
+venv/
+env/
+plc-modbus-sim/.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Logs
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/

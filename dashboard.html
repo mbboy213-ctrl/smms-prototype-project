@@ -1,0 +1,826 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Monitoring System | Maintenance Control Center</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.2/axios.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.1/socket.io.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-0: #06070b;
+            --bg-1: #0b0f17;
+            --bg-2: #121a28;
+            --card: rgba(255, 255, 255, 0.04);
+            --card-hover: rgba(255, 255, 255, 0.07);
+            --border: rgba(255, 255, 255, 0.1);
+            --border-strong: rgba(255, 255, 255, 0.2);
+            --text-0: #eff4ff;
+            --text-1: #b2bfd5;
+            --text-2: #6f7f9d;
+            --primary: #2f7cff;
+            --primary-soft: rgba(47, 124, 255, 0.2);
+            --danger: #ef4444;
+            --danger-soft: rgba(239, 68, 68, 0.2);
+            --warning: #f59e0b;
+            --warning-soft: rgba(245, 158, 11, 0.2);
+            --success: #10b981;
+            --success-soft: rgba(16, 185, 129, 0.2);
+            --radius: 16px;
+            --radius-sm: 12px;
+            --shadow-lg: 0 24px 48px rgba(0, 0, 0, 0.35);
+            --header-h: 78px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Sora', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text-0);
+            background:
+                radial-gradient(circle at 12% 88%, rgba(47, 124, 255, 0.18), transparent 35%),
+                radial-gradient(circle at 92% 12%, rgba(16, 185, 129, 0.15), transparent 30%),
+                linear-gradient(165deg, var(--bg-0), var(--bg-1) 45%, var(--bg-2));
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 56px 56px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: var(--header-h);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 26px;
+            background: rgba(7, 10, 16, 0.82);
+            backdrop-filter: blur(14px);
+            border-bottom: 1px solid var(--border);
+            z-index: 10;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-badge {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #2f7cff, #0ea5e9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            box-shadow: 0 8px 20px rgba(47, 124, 255, 0.3);
+        }
+
+        .brand-title {
+            font-size: 0.98rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        .brand-sub {
+            color: var(--text-2);
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.11em;
+            margin-top: 2px;
+        }
+
+        .topbar-center {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.76rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: var(--success);
+        }
+
+        .live-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 14px rgba(16, 185, 129, 0.7);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.25); opacity: 0.7; }
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .clock {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            color: var(--text-1);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 7px 12px;
+            min-width: 88px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .logout {
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-1);
+            border-radius: 999px;
+            padding: 8px 14px;
+            font-size: 0.76rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .logout:hover {
+            border-color: var(--danger);
+            color: var(--danger);
+            background: rgba(239, 68, 68, 0.08);
+        }
+
+        .layout {
+            position: relative;
+            z-index: 1;
+            max-width: 1480px;
+            margin: 0 auto;
+            padding: calc(var(--header-h) + 24px) 24px 26px;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            backdrop-filter: blur(8px);
+        }
+
+        .kpi-card {
+            padding: 18px;
+        }
+
+        .kpi-label {
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-2);
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .kpi-value {
+            font-size: 1.95rem;
+            line-height: 1;
+            font-weight: 800;
+        }
+
+        .kpi-note {
+            margin-top: 8px;
+            font-size: 0.72rem;
+            color: var(--text-1);
+        }
+
+        .kpi-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .mini-kpi {
+            padding: 14px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .mini-kpi .v {
+            font-size: 1.3rem;
+            font-weight: 800;
+            margin-bottom: 3px;
+        }
+
+        .mini-kpi .l {
+            font-size: 0.66rem;
+            text-transform: uppercase;
+            letter-spacing: 0.09em;
+            color: var(--text-2);
+            font-weight: 700;
+        }
+
+        .danger { color: var(--danger); }
+        .warning { color: var(--warning); }
+        .success { color: var(--success); }
+
+        .panel-title {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-2);
+            font-weight: 700;
+        }
+
+        .machine-summary {
+            padding: 14px;
+            display: grid;
+            gap: 8px;
+        }
+
+        .machine-pill {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.02);
+            font-size: 0.78rem;
+        }
+
+        .machine-pill-name {
+            font-weight: 600;
+            color: var(--text-1);
+        }
+
+        .machine-pill-state {
+            padding: 3px 7px;
+            border-radius: 999px;
+            font-size: 0.63rem;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            font-weight: 700;
+            border: 1px solid;
+        }
+
+        .state-running { color: var(--success); border-color: rgba(16,185,129,0.3); background: var(--success-soft); }
+        .state-warning { color: var(--warning); border-color: rgba(245,158,11,0.35); background: var(--warning-soft); }
+        .state-alarm { color: var(--danger); border-color: rgba(239,68,68,0.35); background: var(--danger-soft); }
+        .state-idle { color: var(--text-1); border-color: var(--border); background: rgba(255,255,255,0.04); }
+
+        .content {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .toolbar {
+            display: grid;
+            grid-template-columns: 1fr 200px 170px;
+            gap: 10px;
+            padding: 12px;
+        }
+
+        .toolbar input,
+        .toolbar select {
+            width: 100%;
+            height: 42px;
+            border-radius: 11px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text-0);
+            padding: 0 12px;
+            font-family: inherit;
+            font-size: 0.85rem;
+            outline: none;
+            transition: border-color 0.2s ease, background 0.2s ease;
+        }
+
+        .toolbar input:focus,
+        .toolbar select:focus {
+            border-color: rgba(47,124,255,0.6);
+            background: rgba(47,124,255,0.08);
+        }
+
+        .ticket-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 12px;
+        }
+
+        .ticket {
+            position: relative;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            background: var(--card);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-height: 236px;
+            transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+        }
+
+        .ticket:hover {
+            transform: translateY(-3px);
+            border-color: var(--border-strong);
+            background: var(--card-hover);
+        }
+
+        .ticket::before {
+            content: '';
+            position: absolute;
+            top: 12px;
+            left: 0;
+            width: 4px;
+            height: calc(100% - 24px);
+            border-radius: 0 4px 4px 0;
+        }
+
+        .ticket.Pending::before { background: var(--danger); }
+        .ticket.In-Progress::before { background: var(--warning); }
+        .ticket.Resolved::before { background: var(--success); }
+
+        .ticket-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .fault-chip {
+            font-size: 0.64rem;
+            text-transform: uppercase;
+            letter-spacing: 0.09em;
+            font-weight: 700;
+            color: var(--text-1);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 5px 9px;
+            max-width: 58%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .ticket-id {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            color: var(--text-2);
+        }
+
+        .machine-title {
+            font-size: 1.18rem;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+
+        .meta {
+            font-size: 0.77rem;
+            color: var(--text-1);
+            line-height: 1.55;
+        }
+
+        .meta strong {
+            color: var(--text-0);
+            font-weight: 600;
+        }
+
+        .status-badge {
+            align-self: flex-start;
+            font-size: 0.64rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 700;
+            border-radius: 999px;
+            padding: 4px 9px;
+            border: 1px solid;
+        }
+
+        .status-badge.Pending { color: var(--danger); border-color: rgba(239,68,68,0.35); background: var(--danger-soft); }
+        .status-badge.In-Progress { color: var(--warning); border-color: rgba(245,158,11,0.35); background: var(--warning-soft); }
+        .status-badge.Resolved { color: var(--success); border-color: rgba(16,185,129,0.35); background: var(--success-soft); }
+
+        .actions {
+            margin-top: auto;
+            display: grid;
+            gap: 8px;
+        }
+
+        .actions.hidden { display: none; }
+
+        .btn {
+            width: 100%;
+            height: 40px;
+            border: 0;
+            border-radius: 11px;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: transform 0.2s ease, filter 0.2s ease;
+        }
+
+        .btn:hover { transform: translateY(-1px); filter: brightness(1.04); }
+
+        .btn-work {
+            color: #101010;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+        }
+
+        .btn-solve {
+            color: #061014;
+            background: linear-gradient(135deg, #34d399, #10b981);
+        }
+
+        .empty {
+            border: 1px dashed var(--border);
+            border-radius: var(--radius);
+            min-height: 250px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-2);
+            font-size: 0.9rem;
+            letter-spacing: 0.03em;
+            background: rgba(255, 255, 255, 0.015);
+        }
+
+        #toast-container {
+            position: fixed;
+            top: calc(var(--header-h) + 10px);
+            right: 16px;
+            z-index: 30;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .toast {
+            min-width: 280px;
+            max-width: 360px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: rgba(11, 16, 26, 0.95);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-lg);
+            animation: toastIn 0.25s ease;
+            font-size: 0.8rem;
+        }
+
+        .toast b { display: block; margin-bottom: 3px; font-size: 0.76rem; letter-spacing: 0.06em; text-transform: uppercase; }
+        .toast.success b { color: var(--success); }
+        .toast.warning b { color: var(--warning); }
+        .toast.error b { color: var(--danger); }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateX(22px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @media (max-width: 1080px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+
+            .toolbar {
+                grid-template-columns: 1fr;
+            }
+
+            .topbar-center { display: none; }
+        }
+
+        @media (max-width: 620px) {
+            .topbar {
+                padding: 0 14px;
+            }
+
+            .brand-sub,
+            .clock { display: none; }
+
+            .layout {
+                padding-left: 12px;
+                padding-right: 12px;
+            }
+
+            .ticket-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <div class="brand">
+            <div class="brand-badge">MS</div>
+            <div>
+                <div class="brand-title">Smart Monitoring Maintenance</div>
+                <div class="brand-sub">Maintenance Control Center</div>
+            </div>
+        </div>
+
+        <div class="topbar-center">
+            <span class="live-dot" id="live-dot"></span>
+            <span id="live-state">System Live</span>
+        </div>
+
+        <div class="topbar-right">
+            <div class="clock" id="clock">--:--:--</div>
+            <button class="logout" onclick="logout()">Terminate Session</button>
+        </div>
+    </header>
+
+    <main class="layout">
+        <aside class="sidebar">
+            <section class="card kpi-card">
+                <div class="kpi-label">Active Tickets</div>
+                <div class="kpi-value" id="status-summary">0</div>
+                <div class="kpi-note" id="kpi-note">Waiting for live data</div>
+            </section>
+
+            <section class="card kpi-card">
+                <div class="kpi-label">Ticket Breakdown</div>
+                <div class="kpi-row">
+                    <div class="mini-kpi">
+                        <div class="v danger" id="kpi-pending">0</div>
+                        <div class="l">Pending</div>
+                    </div>
+                    <div class="mini-kpi">
+                        <div class="v warning" id="kpi-progress">0</div>
+                        <div class="l">In Progress</div>
+                    </div>
+                    <div class="mini-kpi" style="grid-column: span 2;">
+                        <div class="v success" id="kpi-resolved">0</div>
+                        <div class="l">Resolved</div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="panel-title">Machine State Summary</div>
+                <div id="machine-summary" class="machine-summary"></div>
+            </section>
+        </aside>
+
+        <section class="content">
+            <section class="card toolbar">
+                <input id="search-input" type="text" placeholder="Search by machine, fault, or operator" oninput="renderTickets()">
+                <select id="status-filter" onchange="renderTickets()">
+                    <option value="all">All statuses</option>
+                    <option value="Pending">Pending</option>
+                    <option value="In-Progress">In Progress</option>
+                    <option value="Resolved">Resolved</option>
+                </select>
+                <select id="sort-filter" onchange="renderTickets()">
+                    <option value="newest">Newest first</option>
+                    <option value="oldest">Oldest first</option>
+                </select>
+            </section>
+
+            <section id="ticket-list" class="ticket-grid"></section>
+        </section>
+    </main>
+
+    <div id="toast-container"></div>
+
+    <script>
+        const socket = io('http://localhost:3000');
+        let allTickets = [];
+        let machineStates = [];
+
+        loadTickets();
+        updateClock();
+        setInterval(updateClock, 1000);
+
+        async function loadTickets() {
+            try {
+                const res = await axios.get('http://localhost:3000/tickets');
+                allTickets = Array.isArray(res.data) ? res.data : [];
+                renderTickets();
+            } catch (e) {
+                console.error('Error loading tickets', e);
+                showToast('error', 'Load Error', 'Failed to load tickets from server.');
+            }
+        }
+
+        function updateKpis(filteredTickets = allTickets) {
+            const pending = filteredTickets.filter(t => t.status === 'Pending').length;
+            const progress = filteredTickets.filter(t => t.status === 'In-Progress').length;
+            const resolved = filteredTickets.filter(t => t.status === 'Resolved').length;
+            const active = filteredTickets.filter(t => t.status !== 'Resolved').length;
+
+            document.getElementById('kpi-pending').innerText = pending;
+            document.getElementById('kpi-progress').innerText = progress;
+            document.getElementById('kpi-resolved').innerText = resolved;
+            document.getElementById('status-summary').innerText = active;
+            document.getElementById('kpi-note').innerText = `${filteredTickets.length} total in current view`;
+        }
+
+        function getFilteredTickets() {
+            const q = document.getElementById('search-input').value.trim().toLowerCase();
+            const status = document.getElementById('status-filter').value;
+            const sort = document.getElementById('sort-filter').value;
+
+            let items = [...allTickets];
+
+            if (status !== 'all') {
+                items = items.filter(t => t.status === status);
+            }
+
+            if (q) {
+                items = items.filter(t => {
+                    const txt = `${t.machine_name} ${t.fault_type} ${t.operator_name}`.toLowerCase();
+                    return txt.includes(q);
+                });
+            }
+
+            items.sort((a, b) => {
+                const tA = new Date(a.created_at || a.updated_at).getTime();
+                const tB = new Date(b.created_at || b.updated_at).getTime();
+                return sort === 'oldest' ? tA - tB : tB - tA;
+            });
+
+            return items;
+        }
+
+        function renderTickets() {
+            const list = document.getElementById('ticket-list');
+            const tickets = getFilteredTickets();
+            updateKpis(tickets);
+
+            if (tickets.length === 0) {
+                list.innerHTML = '<div class="empty">No tickets match the current filters.</div>';
+                return;
+            }
+
+            list.innerHTML = tickets.map(t => {
+                const ts = new Date(t.created_at || t.updated_at);
+                const stamp = `${ts.toLocaleDateString()} ${ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+                return `
+                    <article class="ticket ${t.status}">
+                        <div class="ticket-top">
+                            <span class="fault-chip">${t.fault_type || 'Unknown'}</span>
+                            <span class="ticket-id">ID ${t.ticket_id}</span>
+                        </div>
+
+                        <h2 class="machine-title">${t.machine_name || 'Unknown machine'}</h2>
+
+                        <p class="meta">
+                            Operator: <strong>${t.operator_name || 'N/A'}</strong><br>
+                            Logged: ${stamp}
+                        </p>
+
+                        <span class="status-badge ${t.status}">${t.status}</span>
+
+                        <div class="actions ${t.status === 'Resolved' ? 'hidden' : ''}">
+                            ${t.status === 'Pending'
+                                ? `<button class="btn btn-work" onclick="updateStatus(${t.ticket_id}, 'In-Progress')">Accept Task</button>`
+                                : `<button class="btn btn-solve" onclick="updateStatus(${t.ticket_id}, 'Resolved')">Resolve Issue</button>`
+                            }
+                        </div>
+                    </article>
+                `;
+            }).join('');
+        }
+
+        async function updateStatus(id, newStatus) {
+            try {
+                await axios.put(`http://localhost:3000/ticket/${id}`, { status: newStatus });
+                showToast('success', 'Status Updated', `Ticket ${id} moved to ${newStatus}.`);
+                loadTickets();
+            } catch (e) {
+                showToast('error', 'Update Failed', 'Could not update ticket status.');
+            }
+        }
+
+        socket.on('connect', () => {
+            document.getElementById('live-state').innerText = 'System Live';
+            document.getElementById('live-state').style.color = 'var(--success)';
+            document.getElementById('live-dot').style.background = 'var(--success)';
+        });
+
+        socket.on('disconnect', () => {
+            document.getElementById('live-state').innerText = 'Connection Lost';
+            document.getElementById('live-state').style.color = 'var(--danger)';
+            document.getElementById('live-dot').style.background = 'var(--danger)';
+        });
+
+        socket.on('notify_maintenance', (ticket) => {
+            allTickets.unshift(ticket);
+            renderTickets();
+            playAlertTone();
+            showToast('warning', 'New Ticket', `Machine ${ticket.machine_name}: ${ticket.fault_type}`);
+        });
+
+        socket.on('ticket_updated', () => {
+            loadTickets();
+        });
+
+        socket.on('factory_live_data', (dataList) => {
+            machineStates = Array.isArray(dataList) ? dataList : [];
+            renderMachineSummary();
+        });
+
+        function renderMachineSummary() {
+            const wrap = document.getElementById('machine-summary');
+
+            if (!machineStates.length) {
+                wrap.innerHTML = '<div class="machine-pill"><span class="machine-pill-name">No live machine data</span><span class="machine-pill-state state-idle">idle</span></div>';
+                return;
+            }
+
+            wrap.innerHTML = machineStates.map(m => {
+                const raw = (m.data?.status || '').toLowerCase();
+                let label = 'idle';
+                let klass = 'state-idle';
+
+                if (raw.includes('alarm')) {
+                    label = 'alarm';
+                    klass = 'state-alarm';
+                } else if (raw.includes('warning')) {
+                    label = 'warning';
+                    klass = 'state-warning';
+                } else if (raw.includes('on') || raw.includes('running')) {
+                    label = 'running';
+                    klass = 'state-running';
+                }
+
+                return `
+                    <div class="machine-pill">
+                        <span class="machine-pill-name">${m.machine_name}</span>
+                        <span class="machine-pill-state ${klass}">${label}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function showToast(type, title, message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<b>${title}</b><div>${message}</div>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(20px)';
+                setTimeout(() => toast.remove(), 220);
+            }, 3200);
+        }
+
+        function playAlertTone() {
+            try {
+                new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play();
+            } catch (e) {
+                // Audio may be blocked by browser policies; ignore.
+            }
+        }
+
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+
+        function logout() {
+            localStorage.removeItem('factory_session');
+            window.location.href = 'login.html';
+        }
+    </script>
+</body>
+</html>

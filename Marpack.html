@@ -1,0 +1,1356 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operator Terminal — Presse | Smart Monitoring System</title>
+    <script src="https://cdn.socket.io/4.7.1/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #050507;
+            --bg-secondary: #0d0d12;
+            --card-bg: rgba(255, 255, 255, 0.025);
+            --card-bg-hover: rgba(255, 255, 255, 0.045);
+            --card-border: rgba(255, 255, 255, 0.07);
+            --card-border-hover: rgba(255, 255, 255, 0.15);
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --primary-glow: rgba(59, 130, 246, 0.25);
+            --danger: #ef4444;
+            --danger-dark: #dc2626;
+            --danger-glow: rgba(239, 68, 68, 0.25);
+            --success: #10b981;
+            --success-glow: rgba(16, 185, 129, 0.25);
+            --warning: #f59e0b;
+            --warning-glow: rgba(245, 158, 11, 0.25);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #475569;
+            --border-radius: 14px;
+            --border-radius-sm: 10px;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.5);
+            --header-h: 72px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Ambient background */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 80% 50% at 10% 90%, rgba(59,130,246,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 40% at 90% 10%, rgba(16,185,129,0.06) 0%, transparent 60%),
+                radial-gradient(ellipse 50% 60% at 50% 50%, rgba(239,68,68,0.03) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Subtle grid overlay */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+            background-size: 48px 48px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ===== HEADER ===== */
+        .top-header {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: var(--header-h);
+            background: rgba(5, 5, 7, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--card-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 32px;
+            z-index: 100;
+        }
+
+        .top-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent 0%, var(--primary) 30%, var(--success) 70%, transparent 100%);
+            opacity: 0.4;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            box-shadow: 0 4px 12px var(--primary-glow);
+        }
+
+        .brand-name {
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: 0.03em;
+        }
+
+        .brand-name span {
+            color: var(--primary);
+        }
+
+        .header-divider {
+            width: 1px;
+            height: 28px;
+            background: var(--card-border);
+        }
+
+        .machine-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .machine-badge-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--text-muted);
+        }
+
+        .machine-badge-name {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+        }
+
+        .header-center {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .connection-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--success-glow);
+            animation: blink 2.5s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .connection-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--success);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .operator-chip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px 6px 10px;
+            background: rgba(59,130,246,0.1);
+            border: 1px solid rgba(59,130,246,0.2);
+            border-radius: 100px;
+        }
+
+        .operator-avatar {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            font-weight: 800;
+            color: white;
+        }
+
+        .operator-name {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .clock-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            padding: 6px 12px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            min-width: 88px;
+            text-align: center;
+        }
+
+        .logout-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: transparent;
+            border: 1px solid var(--card-border);
+            border-radius: var(--border-radius-sm);
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .logout-btn:hover {
+            border-color: var(--danger);
+            color: var(--danger);
+            background: rgba(239,68,68,0.05);
+        }
+
+        /* ===== MAIN LAYOUT ===== */
+        .page-body {
+            padding-top: calc(var(--header-h) + 32px);
+            padding-bottom: 40px;
+            padding-left: 32px;
+            padding-right: 32px;
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            gap: 24px;
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ===== LEFT PANEL ===== */
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .panel-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-radius: var(--border-radius);
+            padding: 24px;
+            transition: border-color 0.3s ease;
+        }
+
+        .panel-card:hover {
+            border-color: var(--card-border-hover);
+        }
+
+        .panel-card-title {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-card-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--card-border);
+        }
+
+        /* Machine Status Hero */
+        .machine-hero {
+            text-align: center;
+            padding: 32px 24px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: var(--border-radius);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .machine-hero::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+        }
+
+        .hero-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .hero-machine-name {
+            font-size: 3.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--text-primary) 30%, var(--text-secondary) 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1;
+            margin-bottom: 16px;
+            letter-spacing: -0.03em;
+        }
+
+        .hero-status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 20px;
+            border-radius: 100px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .hero-status-pill.running {
+            background: rgba(16,185,129,0.12);
+            border: 1px solid rgba(16,185,129,0.3);
+            color: var(--success);
+        }
+
+        .hero-status-pill.stopped {
+            background: rgba(239,68,68,0.1);
+            border: 1px solid rgba(239,68,68,0.25);
+            color: var(--danger);
+        }
+
+        .hero-status-pill.unknown {
+            background: rgba(71,85,105,0.2);
+            border: 1px solid var(--card-border);
+            color: var(--text-muted);
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .running .status-dot { animation: blink 1.5s ease-in-out infinite; }
+
+        /* Metric bars */
+        .metric-bar-list {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .metric-bar-item {}
+
+        .metric-bar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 8px;
+        }
+
+        .metric-bar-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .metric-bar-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .metric-bar-track {
+            height: 6px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 100px;
+            overflow: hidden;
+        }
+
+        .metric-bar-fill {
+            height: 100%;
+            border-radius: 100px;
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .bar-temp { background: linear-gradient(90deg, #f59e0b, #ef4444); }
+        .bar-speed { background: linear-gradient(90deg, #3b82f6, #8b5cf6); }
+        .bar-pressure { background: linear-gradient(90deg, #10b981, #06b6d4); }
+
+        /* Tickets feed */
+        .ticket-feed {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 280px;
+            overflow-y: auto;
+        }
+
+        .ticket-feed::-webkit-scrollbar { width: 4px; }
+        .ticket-feed::-webkit-scrollbar-track { background: transparent; }
+        .ticket-feed::-webkit-scrollbar-thumb { background: var(--card-border); border-radius: 4px; }
+
+        .ticket-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--card-border);
+            border-radius: var(--border-radius-sm);
+            transition: all 0.2s ease;
+        }
+
+        .ticket-row:hover {
+            background: var(--card-bg-hover);
+            border-color: var(--card-border-hover);
+        }
+
+        .ticket-type-dot {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+
+        .ticket-info { flex: 1; min-width: 0; }
+
+        .ticket-fault {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .ticket-time {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .ticket-status-badge {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 3px 8px;
+            border-radius: 6px;
+            flex-shrink: 0;
+        }
+
+        .badge-pending {
+            background: rgba(239,68,68,0.12);
+            color: var(--danger);
+            border: 1px solid rgba(239,68,68,0.2);
+        }
+
+        .badge-resolved {
+            background: rgba(16,185,129,0.1);
+            color: var(--success);
+            border: 1px solid rgba(16,185,129,0.2);
+        }
+
+        .no-tickets {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            padding: 24px 0;
+            font-style: italic;
+        }
+
+        /* ===== RIGHT PANEL ===== */
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .report-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-radius: var(--border-radius);
+            padding: 32px;
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .report-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--danger), transparent);
+            opacity: 0.6;
+        }
+
+        .report-header {
+            margin-bottom: 32px;
+        }
+
+        .report-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+            margin-bottom: 6px;
+        }
+
+        .report-subtitle {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        /* Fault category grid */
+        .fault-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .fault-card {
+            background: rgba(255,255,255,0.02);
+            border: 2px solid var(--card-border);
+            border-radius: var(--border-radius);
+            padding: 28px 20px;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            position: relative;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .fault-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(59,130,246,0.06), transparent);
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
+        .fault-card:hover {
+            border-color: rgba(59,130,246,0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 12px 32px rgba(59,130,246,0.12);
+        }
+
+        .fault-card:hover::after { opacity: 1; }
+
+        .fault-card.selected {
+            border-color: var(--primary);
+            background: rgba(59,130,246,0.08);
+            box-shadow: 0 0 0 1px rgba(59,130,246,0.3), 0 8px 32px rgba(59,130,246,0.15);
+            transform: translateY(-2px);
+        }
+
+        .fault-card.selected::after { opacity: 1; }
+
+        .fault-icon-wrap {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--card-border);
+            transition: all 0.25s ease;
+            position: relative;
+            z-index: 1;
+        }
+
+        .fault-card.selected .fault-icon-wrap {
+            background: rgba(59,130,246,0.15);
+            border-color: rgba(59,130,246,0.3);
+            transform: scale(1.05);
+        }
+
+        .fault-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            transition: color 0.25s ease;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .fault-card.selected .fault-title {
+            color: var(--text-primary);
+        }
+
+        .fault-desc {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-align: center;
+            line-height: 1.4;
+            position: relative;
+            z-index: 1;
+        }
+
+        .fault-check {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            color: white;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .fault-card.selected .fault-check {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* Submit area */
+        .submit-area {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .selected-info {
+            flex: 1;
+            padding: 16px 20px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--card-border);
+            border-radius: var(--border-radius-sm);
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .selected-info.has-selection {
+            border-color: rgba(59,130,246,0.25);
+            background: rgba(59,130,246,0.05);
+            color: var(--text-secondary);
+        }
+
+        .selected-info strong {
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+
+        .submit-btn {
+            padding: 16px 32px;
+            border-radius: var(--border-radius-sm);
+            border: none;
+            background: linear-gradient(135deg, var(--danger), var(--danger-dark));
+            color: white;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            box-shadow: 0 6px 20px var(--danger-glow);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: inherit;
+            white-space: nowrap;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .submit-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+            transition: left 0.4s ease;
+        }
+
+        .submit-btn:hover::before { left: 100%; }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 28px var(--danger-glow);
+        }
+
+        .submit-btn:active { transform: translateY(0); }
+
+        .submit-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Shift info card */
+        .shift-card {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1px;
+            background: var(--card-border);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            border: 1px solid var(--card-border);
+        }
+
+        .shift-item {
+            background: var(--card-bg);
+            padding: 20px;
+            text-align: center;
+        }
+
+        .shift-item-label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .shift-item-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* ===== TOAST ===== */
+        #toast-container {
+            position: fixed;
+            top: calc(var(--header-h) + 16px);
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+
+        .toast {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px 18px;
+            background: rgba(15, 15, 20, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            border-radius: var(--border-radius);
+            min-width: 300px;
+            max-width: 380px;
+            box-shadow: var(--shadow-lg);
+            animation: toast-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            pointer-events: all;
+        }
+
+        @keyframes toast-in {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes toast-out {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(110%); opacity: 0; }
+        }
+
+        .toast.removing { animation: toast-out 0.25s ease forwards; }
+
+        .toast-icon {
+            width: 32px; height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .toast.success { border-left: 3px solid var(--success); }
+        .toast.success .toast-icon { background: rgba(16,185,129,0.12); }
+
+        .toast.error { border-left: 3px solid var(--danger); }
+        .toast.error .toast-icon { background: rgba(239,68,68,0.1); }
+
+        .toast.info { border-left: 3px solid var(--primary); }
+        .toast.info .toast-icon { background: rgba(59,130,246,0.1); }
+
+        .toast-body {}
+        .toast-title { font-size: 0.8rem; font-weight: 700; color: var(--text-primary); margin-bottom: 2px; }
+        .toast-msg { font-size: 0.75rem; color: var(--text-secondary); }
+
+        /* ===== CONFIRM MODAL ===== */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(8px);
+            z-index: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .modal-overlay.open {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal-box {
+            background: #0f1117;
+            border: 1px solid var(--card-border-hover);
+            border-radius: 20px;
+            padding: 40px;
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+        }
+
+        .modal-overlay.open .modal-box { transform: scale(1); }
+
+        .modal-icon {
+            width: 64px; height: 64px;
+            background: rgba(239,68,68,0.1);
+            border: 1px solid rgba(239,68,68,0.25);
+            border-radius: 50%;
+            margin: 0 auto 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+        }
+
+        .modal-title { font-size: 1.2rem; font-weight: 800; margin-bottom: 10px; }
+        .modal-msg { font-size: 0.875rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 32px; }
+
+        .modal-fault-tag {
+            display: inline-block;
+            background: rgba(59,130,246,0.1);
+            border: 1px solid rgba(59,130,246,0.25);
+            color: var(--primary);
+            font-weight: 700;
+            padding: 4px 14px;
+            border-radius: 100px;
+            font-size: 0.85rem;
+            margin-bottom: 24px;
+        }
+
+        .modal-actions { display: flex; gap: 12px; }
+
+        .modal-cancel {
+            flex: 1;
+            padding: 14px;
+            background: transparent;
+            border: 1px solid var(--card-border);
+            border-radius: var(--border-radius-sm);
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+
+        .modal-cancel:hover {
+            border-color: var(--card-border-hover);
+            color: var(--text-primary);
+        }
+
+        .modal-confirm {
+            flex: 1;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--danger), var(--danger-dark));
+            border: none;
+            border-radius: var(--border-radius-sm);
+            color: white;
+            font-weight: 700;
+            font-size: 0.875rem;
+            cursor: pointer;
+            font-family: inherit;
+            box-shadow: 0 4px 16px var(--danger-glow);
+            transition: all 0.2s ease;
+        }
+
+        .modal-confirm:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+        @media (max-width: 1024px) {
+            .page-body {
+                grid-template-columns: 1fr;
+                padding-left: 20px;
+                padding-right: 20px;
+            }
+            .fault-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 640px) {
+            .top-header { padding: 0 20px; }
+            .brand-name, .machine-badge-label { display: none; }
+            .fault-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+            .submit-area { flex-direction: column; }
+            .submit-btn { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ===== TOP HEADER ===== -->
+    <header class="top-header">
+        <div class="header-left">
+            <div class="brand">
+                <div class="brand-icon">⚡</div>
+                <div class="brand-name">Sm<span>S</span></div>
+            </div>
+            <div class="header-divider"></div>
+            <div class="machine-badge">
+                <span class="machine-badge-label">Station</span>
+                <span class="machine-badge-name" id="header-machine-name">Marpack</span>
+            </div>
+        </div>
+
+        <div class="header-center">
+            <div class="connection-dot" id="conn-dot"></div>
+            <span class="connection-label" id="conn-label">Live</span>
+        </div>
+
+        <div class="header-right">
+            <div class="operator-chip">
+                <div class="operator-avatar" id="op-avatar">O</div>
+                <span class="operator-name" id="op-name">Operator</span>
+            </div>
+            <div class="clock-display" id="clock">--:--:--</div>
+            <button class="logout-btn" onclick="logout()">
+                <span>⎋</span> Sign Out
+            </button>
+        </div>
+    </header>
+
+    <!-- ===== PAGE BODY ===== -->
+    <main class="page-body">
+
+        <!-- LEFT PANEL -->
+        <aside class="left-panel">
+
+            <!-- Machine Hero -->
+            <div class="machine-hero">
+                <div class="hero-label">Active Station</div>
+                <h1 class="hero-machine-name" id="m-name">Marpack</h1>
+                <div class="hero-status-pill unknown" id="status-pill">
+                    <span class="status-dot"></span>
+                    <span id="status-text">Connecting…</span>
+                </div>
+            </div>
+
+            <!-- Live Metrics -->
+            <div class="panel-card">
+                <div class="panel-card-title">Live Metrics</div>
+                <div class="metric-bar-list">
+                    <div class="metric-bar-item">
+                        <div class="metric-bar-header">
+                            <span class="metric-bar-label">Temperature</span>
+                            <span class="metric-bar-value" id="temp-value">-- °C</span>
+                        </div>
+                        <div class="metric-bar-track">
+                            <div class="metric-bar-fill bar-temp" id="temp-bar" style="width:0%"></div>
+                        </div>
+                    </div>
+                    <div class="metric-bar-item">
+                        <div class="metric-bar-header">
+                            <span class="metric-bar-label">Speed</span>
+                            <span class="metric-bar-value" id="speed-value">-- RPM</span>
+                        </div>
+                        <div class="metric-bar-track">
+                            <div class="metric-bar-fill bar-speed" id="speed-bar" style="width:0%"></div>
+                        </div>
+                    </div>
+                    <div class="metric-bar-item">
+                        <div class="metric-bar-header">
+                            <span class="metric-bar-label">Pressure</span>
+                            <span class="metric-bar-value" id="pressure-value">-- bar</span>
+                        </div>
+                        <div class="metric-bar-track">
+                            <div class="metric-bar-fill bar-pressure" id="pressure-bar" style="width:0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shift Info -->
+            <div class="shift-card">
+                <div class="shift-item">
+                    <div class="shift-item-label">Date</div>
+                    <div class="shift-item-value" id="shift-date">--</div>
+                </div>
+                <div class="shift-item">
+                    <div class="shift-item-label">Shift</div>
+                    <div class="shift-item-value" id="shift-name">--</div>
+                </div>
+                <div class="shift-item">
+                    <div class="shift-item-label">Alerts Today</div>
+                    <div class="shift-item-value" id="alert-count">0</div>
+                </div>
+            </div>
+
+            <!-- Recent Tickets -->
+            <div class="panel-card">
+                <div class="panel-card-title">Recent Alerts</div>
+                <div class="ticket-feed" id="ticket-feed">
+                    <div class="no-tickets">No alerts recorded today</div>
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- RIGHT PANEL -->
+        <div class="right-panel">
+
+            <div class="report-card">
+                <div class="report-header">
+                    <h2 class="report-title">Report a Fault</h2>
+                    <p class="report-subtitle">Select the fault category and submit an alert to the maintenance team.</p>
+                </div>
+
+                <div class="fault-grid">
+                    <div class="fault-card" onclick="selectFault(this, 'Mechanical')">
+                        <div class="fault-check">✓</div>
+                        <div class="fault-icon-wrap">⚙️</div>
+                        <span class="fault-title">Mechanical</span>
+                        <span class="fault-desc">Gears, bearings, shafts, vibration</span>
+                    </div>
+                    <div class="fault-card" onclick="selectFault(this, 'Electrical')">
+                        <div class="fault-check">✓</div>
+                        <div class="fault-icon-wrap">⚡</div>
+                        <span class="fault-title">Electrical</span>
+                        <span class="fault-desc">Power, wiring, contactors, motors</span>
+                    </div>
+                    <div class="fault-card" onclick="selectFault(this, 'Electronic')">
+                        <div class="fault-check">✓</div>
+                        <div class="fault-icon-wrap">💻</div>
+                        <span class="fault-title">Electronic</span>
+                        <span class="fault-desc">PLC, sensors, HMI, control boards</span>
+                    </div>
+                    <div class="fault-card" onclick="selectFault(this, 'Material')">
+                        <div class="fault-check">✓</div>
+                        <div class="fault-icon-wrap">📦</div>
+                        <span class="fault-title">Material</span>
+                        <span class="fault-desc">Raw material, supply, blockage</span>
+                    </div>
+                </div>
+
+                <div class="submit-area">
+                    <div class="selected-info" id="selected-info">
+                        No fault category selected
+                    </div>
+                    <button class="submit-btn" id="submit-btn" onclick="openConfirm()" disabled>
+                        Send Alert
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- CONFIRM MODAL -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal-box">
+            <div class="modal-icon">🚨</div>
+            <h3 class="modal-title">Confirm Alert Dispatch</h3>
+            <p class="modal-msg">You are about to notify the maintenance team of a fault at this station.</p>
+            <div class="modal-fault-tag" id="modal-fault-tag">—</div>
+            <div class="modal-actions">
+                <button class="modal-cancel" onclick="closeConfirm()">Cancel</button>
+                <button class="modal-confirm" onclick="submitAlert()">Dispatch Alert</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST CONTAINER -->
+    <div id="toast-container"></div>
+
+    <script>
+        const MACHINE_NAME = 'Marpack';
+        const MAX_TEMP = 200, MAX_SPEED = 3000, MAX_PRESSURE = 10;
+
+        let selectedFault = '';
+        let session = JSON.parse(localStorage.getItem('factory_session')) || { username: 'Operator', assigned_machine: MACHINE_NAME };
+        let todayAlerts = 0;
+
+        // ── Init ──────────────────────────────────────────────────
+        function init() {
+            const machine = session.assigned_machine || MACHINE_NAME;
+            document.getElementById('m-name').innerText = machine;
+            document.getElementById('header-machine-name').innerText = machine;
+            document.getElementById('op-name').innerText = session.username;
+            document.getElementById('op-avatar').innerText = (session.username || 'O')[0].toUpperCase();
+            updateShiftInfo();
+            loadTickets();
+        }
+
+        init();
+
+        // ── Clock & Shift ─────────────────────────────────────────
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+
+        function updateShiftInfo() {
+            const now = new Date();
+            const h = now.getHours();
+            let shift = h >= 6 && h < 14 ? 'Morning' : h >= 14 && h < 22 ? 'Afternoon' : 'Night';
+            document.getElementById('shift-date').innerText = now.toLocaleDateString([], { month: 'short', day: '2-digit' });
+            document.getElementById('shift-name').innerText = shift;
+        }
+
+        setInterval(() => { updateClock(); updateShiftInfo(); }, 1000);
+
+        // ── Fault selection ───────────────────────────────────────
+        function selectFault(el, type) {
+            document.querySelectorAll('.fault-card').forEach(c => c.classList.remove('selected'));
+            el.classList.add('selected');
+            selectedFault = type;
+            const info = document.getElementById('selected-info');
+            info.innerHTML = `Fault: <strong>${type}</strong> — ready to dispatch`;
+            info.classList.add('has-selection');
+            const btn = document.getElementById('submit-btn');
+            btn.disabled = false;
+            if (window.navigator.vibrate) window.navigator.vibrate(40);
+        }
+
+        // ── Confirm modal ─────────────────────────────────────────
+        function openConfirm() {
+            if (!selectedFault) return;
+            document.getElementById('modal-fault-tag').innerText = selectedFault;
+            document.getElementById('modal').classList.add('open');
+        }
+
+        function closeConfirm() {
+            document.getElementById('modal').classList.remove('open');
+        }
+
+        document.getElementById('modal').addEventListener('click', function(e) {
+            if (e.target === this) closeConfirm();
+        });
+
+        // ── Submit ────────────────────────────────────────────────
+        async function submitAlert() {
+            closeConfirm();
+            const btn = document.getElementById('submit-btn');
+            btn.disabled = true;
+            btn.innerText = 'Dispatching…';
+
+            try {
+                await axios.post('http://localhost:3000/send_fault', {
+                    machineName: session.assigned_machine || MACHINE_NAME,
+                    faultType: selectedFault,
+                    operator: session.username,
+                    status: 'Pending'
+                });
+
+                todayAlerts++;
+                document.getElementById('alert-count').innerText = todayAlerts;
+                showToast('success', 'Alert Dispatched', `Maintenance team notified — ${selectedFault} fault.`);
+                resetFaultSelection();
+                loadTickets();
+            } catch (e) {
+                showToast('error', 'Connection Failed', 'Unable to reach server. Check your network.');
+            }
+
+            btn.disabled = false;
+            btn.innerText = 'Send Alert';
+        }
+
+        function resetFaultSelection() {
+            document.querySelectorAll('.fault-card').forEach(c => c.classList.remove('selected'));
+            selectedFault = '';
+            document.getElementById('selected-info').innerHTML = 'No fault category selected';
+            document.getElementById('selected-info').classList.remove('has-selection');
+            document.getElementById('submit-btn').disabled = true;
+        }
+
+        // ── Tickets feed ──────────────────────────────────────────
+        async function loadTickets() {
+            try {
+                const res = await axios.get('http://localhost:3000/tickets');
+                const machine = session.assigned_machine || MACHINE_NAME;
+                const tickets = res.data.filter(t => t.machine_name === machine).slice(0, 8);
+                const feed = document.getElementById('ticket-feed');
+
+                const iconMap = { Mechanical: '⚙️', Electrical: '⚡', Electronic: '💻', Material: '📦' };
+
+                if (tickets.length === 0) {
+                    feed.innerHTML = '<div class="no-tickets">No alerts recorded today</div>';
+                    return;
+                }
+
+                feed.innerHTML = tickets.map(t => {
+                    const icon = iconMap[t.fault_type] || '⚠️';
+                    const time = new Date(t.created_at || t.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const statusClass = t.status === 'Resolved' ? 'badge-resolved' : 'badge-pending';
+                    return `
+                        <div class="ticket-row">
+                            <div class="ticket-type-dot" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07)">${icon}</div>
+                            <div class="ticket-info">
+                                <div class="ticket-fault">${t.fault_type || 'Unknown'}</div>
+                                <div class="ticket-time">${time}</div>
+                            </div>
+                            <span class="ticket-status-badge ${statusClass}">${t.status}</span>
+                        </div>
+                    `;
+                }).join('');
+
+                const today = new Date().toDateString();
+                todayAlerts = tickets.filter(t => new Date(t.created_at || t.updated_at).toDateString() === today).length;
+                document.getElementById('alert-count').innerText = todayAlerts;
+            } catch (e) { /* silent */ }
+        }
+
+        // ── Toast ─────────────────────────────────────────────────
+        function showToast(type, title, msg) {
+            const icons = { success: '✓', error: '✗', info: 'ℹ' };
+            const container = document.getElementById('toast-container');
+            const el = document.createElement('div');
+            el.className = `toast ${type}`;
+            el.innerHTML = `
+                <div class="toast-icon">${icons[type] || '!'}</div>
+                <div class="toast-body">
+                    <div class="toast-title">${title}</div>
+                    <div class="toast-msg">${msg}</div>
+                </div>
+            `;
+            container.appendChild(el);
+            setTimeout(() => {
+                el.classList.add('removing');
+                setTimeout(() => el.remove(), 280);
+            }, 4000);
+        }
+
+        // ── Socket.IO ─────────────────────────────────────────────
+        const socket = io('http://localhost:3000');
+
+        socket.on('connect', () => {
+            document.getElementById('conn-dot').style.background = 'var(--success)';
+            document.getElementById('conn-label').innerText = 'Live';
+            document.getElementById('conn-label').style.color = 'var(--success)';
+        });
+
+        socket.on('disconnect', () => {
+            document.getElementById('conn-dot').style.background = 'var(--danger)';
+            document.getElementById('conn-label').innerText = 'Offline';
+            document.getElementById('conn-label').style.color = 'var(--danger)';
+        });
+
+        socket.on('factory_live_data', (dataList) => {
+            const machine = session.assigned_machine || MACHINE_NAME;
+            const d = dataList.find(item => item.machine_name === machine);
+            if (!d) return;
+
+            const isOn = d.data.status === 'ON';
+            const temp = d.data.temperature ?? 0;
+            const speed = d.data.speed ?? 0;
+            const pressure = d.data.pressure ?? 0;
+
+            document.getElementById('temp-value').innerText = `${temp} °C`;
+            document.getElementById('speed-value').innerText = `${speed} RPM`;
+            document.getElementById('pressure-value').innerText = `${pressure} bar`;
+            document.getElementById('temp-bar').style.width = `${Math.min((temp / MAX_TEMP) * 100, 100)}%`;
+            document.getElementById('speed-bar').style.width = `${Math.min((speed / MAX_SPEED) * 100, 100)}%`;
+            document.getElementById('pressure-bar').style.width = `${Math.min((pressure / MAX_PRESSURE) * 100, 100)}%`;
+
+            const pill = document.getElementById('status-pill');
+            const statusText = document.getElementById('status-text');
+            pill.className = `hero-status-pill ${isOn ? 'running' : 'stopped'}`;
+            statusText.innerText = isOn ? 'Running' : 'Stopped';
+        });
+
+        socket.on('notify_maintenance', () => { setTimeout(loadTickets, 800); });
+        socket.on('ticket_updated', () => { setTimeout(loadTickets, 400); });
+
+        // ── Logout ────────────────────────────────────────────────
+        function logout() {
+            localStorage.removeItem('factory_session');
+            window.location.href = 'login.html';
+        }
+    </script>
+</body>
+</html>
