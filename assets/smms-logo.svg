@@ -1,0 +1,32 @@
+<svg width="240" height="72" viewBox="0 0 240 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g1" x1="10" y1="8" x2="74" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#53A0FF"/>
+      <stop offset="1" stop-color="#1570EF"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="92" y1="18" x2="224" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EEF4FF"/>
+      <stop offset="1" stop-color="#A9B8D0"/>
+    </linearGradient>
+    <linearGradient id="g3" x1="128" y1="18" x2="168" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#53A0FF"/>
+      <stop offset="1" stop-color="#1570EF"/>
+    </linearGradient>
+    <filter id="shadow" x="0" y="0" width="88" height="80" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="10" stdDeviation="8" flood-color="#1D4ED8" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#shadow)">
+    <rect x="8" y="8" width="64" height="56" rx="18" fill="url(#g1)"/>
+    <path d="M23 25.5C23 21.9101 25.9101 19 29.5 19H48.5C52.0899 19 55 21.9101 55 25.5C55 29.0899 52.0899 32 48.5 32H33.5C31.567 32 30 33.567 30 35.5C30 37.433 31.567 39 33.5 39H51" stroke="white" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="55" cy="39" r="3.5" fill="white"/>
+  </g>
+
+  <g>
+    <text x="92" y="50" fill="url(#g2)" font-size="38" font-weight="800" font-family="Segoe UI, Arial, sans-serif" letter-spacing="-1.4">Sm</text>
+    <text x="136" y="50" fill="url(#g3)" font-size="38" font-weight="800" font-family="Segoe UI, Arial, sans-serif" letter-spacing="-1.4">m</text>
+    <text x="168" y="50" fill="url(#g2)" font-size="38" font-weight="800" font-family="Segoe UI, Arial, sans-serif" letter-spacing="-1.4">S</text>
+    <text x="93" y="64" fill="#6F7F9D" font-size="9.5" font-weight="700" font-family="Segoe UI, Arial, sans-serif" letter-spacing="2.2">SMART MONITORING SYSTEM</text>
+  </g>
+</svg>

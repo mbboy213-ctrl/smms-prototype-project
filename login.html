@@ -100,24 +100,12 @@
             margin-bottom: 48px;
         }
 
-        .logo {
-            font-size: 3.5rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, var(--text-primary), var(--text-secondary));
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin: 0;
-            line-height: 1;
-            letter-spacing: -0.02em;
-            font-family: 'Sora', sans-serif;
-        }
-
-        .logo span {
-            background: linear-gradient(135deg, var(--primary), rgba(59, 130, 246, 0.8));
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+        .logo-mark {
+            width: 220px;
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
         }
 
         .subtitle {
@@ -261,8 +249,8 @@
                 margin: 20px;
             }
 
-            .logo {
-                font-size: 2.5rem;
+            .logo-mark {
+                width: 180px;
             }
         }
     </style>
@@ -270,7 +258,7 @@
 <body>
     <div class="login-container">
         <div class="logo-section">
-            <h1 class="logo">Sm<span>mS</span></h1>
+            <img class="logo-mark" src="assets/smms-logo.svg" alt="SmmS logo">
             <div class="subtitle">Smart Monitoring System</div>
         </div>
 
