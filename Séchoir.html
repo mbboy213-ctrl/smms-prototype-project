@@ -6,7 +6,7 @@
     <title>Operator Terminal — Presse | Smart Monitoring System</title>
     <script src="https://cdn.socket.io/4.7.1/socket.io.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-primary: #050507;
@@ -38,7 +38,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: 'Sora', -apple-system, BlinkMacSystemFont, sans-serif;
             background: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
@@ -108,27 +108,22 @@
             gap: 10px;
         }
 
-        .brand-icon {
-            width: 36px;
-            height: 36px;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1rem;
-            box-shadow: 0 4px 12px var(--primary-glow);
+        .brand-logo {
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--text-primary), var(--text-secondary));
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1;
+            letter-spacing: -0.02em;
         }
 
-        .brand-name {
-            font-size: 0.875rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            letter-spacing: 0.03em;
-        }
-
-        .brand-name span {
-            color: var(--primary);
+        .brand-logo span {
+            background: linear-gradient(135deg, var(--primary), rgba(59, 130, 246, 0.8));
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         .header-divider {
@@ -964,7 +959,8 @@
 
         @media (max-width: 640px) {
             .top-header { padding: 0 20px; }
-            .brand-name, .machine-badge-label { display: none; }
+            .machine-badge-label { display: none; }
+            .brand-logo { font-size: 1.55rem; }
             .fault-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
             .submit-area { flex-direction: column; }
             .submit-btn { width: 100%; }
@@ -977,8 +973,7 @@
     <header class="top-header">
         <div class="header-left">
             <div class="brand">
-                <div class="brand-icon">⚡</div>
-                <div class="brand-name">Sm<span>S</span></div>
+                <div class="brand-logo">Sm<span>mS</span></div>
             </div>
             <div class="header-divider"></div>
             <div class="machine-badge">
