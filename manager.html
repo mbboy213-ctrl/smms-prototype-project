@@ -609,6 +609,22 @@
             font-size: 0.74rem;
         }
 
+        .snapshot-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+
+        .snapshot-panel {
+            display: none;
+        }
+
+        .snapshot-panel.open {
+            display: block;
+        }
+
         .toolbar {
             padding: 10px 14px 0;
             display: flex;
@@ -826,11 +842,21 @@
                     </div>
 
                     <div class="setting-card" style="grid-column: 1 / -1;">
-                        <label style="margin-bottom: 6px;">Users Table Snapshot</label>
-                        <div id="users-list" class="admin-list"></div>
+                        <div class="snapshot-header">
+                            <label style="margin: 0;">Users Table Snapshot</label>
+                            <button class="tool-btn" onclick="toggleSnapshot('users')" id="users-toggle-btn">Show Users</button>
+                        </div>
+                        <div id="users-panel" class="snapshot-panel">
+                            <div id="users-list" class="admin-list"></div>
+                        </div>
 
-                        <label style="margin-top:12px; margin-bottom: 6px;">Machines Table Snapshot</label>
-                        <div id="machines-list" class="admin-list"></div>
+                        <div class="snapshot-header" style="margin-top:12px;">
+                            <label style="margin: 0;">Machines Table Snapshot</label>
+                            <button class="tool-btn" onclick="toggleSnapshot('machines')" id="machines-toggle-btn">Show Machines</button>
+                        </div>
+                        <div id="machines-panel" class="snapshot-panel">
+                            <div id="machines-list" class="admin-list"></div>
+                        </div>
 
                         <button class="save-btn" onclick="loadAdminData()">Refresh Data From PostgreSQL</button>
                     </div>
@@ -872,6 +898,22 @@
             const el = document.getElementById(id);
             el.className = `inline-msg ${type || ''}`;
             el.innerText = message || '';
+        }
+
+        function toggleSnapshot(type) {
+            const panel = document.getElementById(`${type}-panel`);
+            const btn = document.getElementById(`${type}-toggle-btn`);
+
+            if (!panel || !btn) return;
+
+            const isOpen = panel.classList.contains('open');
+            panel.classList.toggle('open', !isOpen);
+
+            if (type === 'users') {
+                btn.innerText = isOpen ? 'Show Users' : 'Hide Users';
+            } else {
+                btn.innerText = isOpen ? 'Show Machines' : 'Hide Machines';
+            }
         }
 
         function toggleAssignedMachine() {
