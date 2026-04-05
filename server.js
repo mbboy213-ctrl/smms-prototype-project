@@ -24,6 +24,12 @@ const pool = new Pool({
     port: process.env.DB_PORT,
 });
 
+const ALLOWED_ROLES = new Set(['manager', 'maintenance', 'operator']);
+
+function normalizeText(value) {
+    return typeof value === 'string' ? value.trim() : '';
+}
+
 // --- 1. UNIFIED LOGIN ROUTE ---
 // Handles both Manager and Operator logins
 app.post('/api/login', async (req, res) => {
@@ -62,14 +68,50 @@ app.get('/api/users', async (req, res) => {
 
 // Create a new user account
 app.post('/api/register', async (req, res) => {
-    const { username, password, role, machine } = req.body;
+    const username = normalizeText(req.body.username);
+    const password = typeof req.body.password === 'string' ? req.body.password : '';
+    const role = normalizeText(req.body.role).toLowerCase();
+    const machine = normalizeText(req.body.machine);
+
     try {
+        if (!username) {
+            return res.status(400).json({ error: 'Username is required' });
+        }
+
+        if (username.length < 3 || username.length > 50) {
+            return res.status(400).json({ error: 'Username must be between 3 and 50 characters' });
+        }
+
+        if (!password || password.length < 6) {
+            return res.status(400).json({ error: 'Password must be at least 6 characters' });
+        }
+
+        if (!ALLOWED_ROLES.has(role)) {
+            return res.status(400).json({ error: 'Role must be manager, maintenance, or operator' });
+        }
+
+        let assignedMachine = null;
+        if (role === 'operator') {
+            if (!machine || machine === 'None') {
+                return res.status(400).json({ error: 'Operator must be assigned to a machine' });
+            }
+
+            const machineCheck = await pool.query('SELECT name FROM machines WHERE name = $1', [machine]);
+            if (machineCheck.rows.length === 0) {
+                return res.status(400).json({ error: 'Assigned machine does not exist' });
+            }
+            assignedMachine = machine;
+        }
+
         await pool.query(
             'INSERT INTO users (username, password, role, assigned_machine) VALUES ($1, $2, $3, $4)',
-            [username, password, role, machine === 'None' ? null : machine]
+            [username, password, role, assignedMachine]
         );
         res.status(200).json({ message: "User created" });
     } catch (err) {
+        if (err.code === '23505') {
+            return res.status(400).json({ error: 'Username already exists' });
+        }
         res.status(500).json({ error: err.message });
     }
 });
@@ -111,10 +153,20 @@ app.get('/machines', async (req, res) => {
 
 // Create a new machine
 app.post('/api/machines', async (req, res) => {
-    const { name, type } = req.body;
+    const name = normalizeText(req.body.name);
+    const type = normalizeText(req.body.type);
+
     try {
         if (!name) {
             return res.status(400).json({ error: 'Machine name is required' });
+        }
+
+        if (name.length < 2 || name.length > 60) {
+            return res.status(400).json({ error: 'Machine name must be between 2 and 60 characters' });
+        }
+
+        if (type && type.length > 60) {
+            return res.status(400).json({ error: 'Machine type must be 60 characters or less' });
         }
         
         // Get the next ID
